@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
-import { PackageX } from 'lucide-react'
+import { PackageX, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
 import { FiltersPanel } from '../components/FiltersPanel'
 import { ProductCard, ProductCardSkeleton } from '../components/ProductCard'
 import { TopBar } from '../components/TopBar'
 import { ActiveFilters } from '../components/ActiveFilters'
-import { MOCK_PRODUCTS, PRICE_MIN, PRICE_MAX } from '../data/mockProducts'
+import { PRICE_MIN, PRICE_MAX } from '../data/mockProducts'
 import type { FilterState, SortOption, ViewMode } from '../types/product.types'
+import { useProducts } from '../hooks/useProducts'
 
 const DEFAULT_FILTERS: FilterState = {
   categories: [],
@@ -19,15 +19,22 @@ const DEFAULT_FILTERS: FilterState = {
   colors: [],
 }
 
+const PAGE_SIZE = 10
+
 export default function ProductsPage() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
   const [sort, setSort] = useState<SortOption>('newest')
   const [view, setView] = useState<ViewMode>('grid')
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [isLoading] = useState(false) // flip to true to preview skeleton
+  const [page, setPage] = useState(0)
+
+  const { data: pageData, isLoading, isError } = useProducts(page, sort, PAGE_SIZE)
+  const products = pageData?.content ?? []
+  const totalPages = pageData?.totalPages ?? 0
+  const totalElements = pageData?.totalElements ?? 0
 
   const filtered = useMemo(() => {
-    let list = [...MOCK_PRODUCTS]
+    let list = [...products]
 
     if (filters.categories.length) list = list.filter((p) => filters.categories.includes(p.category))
     if (filters.brands.length) list = list.filter((p) => filters.brands.includes(p.brand))
@@ -36,20 +43,26 @@ export default function ProductsPage() {
     if (filters.colors.length) list = list.filter((p) => p.colors.some((c) => filters.colors.includes(c)))
     list = list.filter((p) => p.price >= filters.priceRange[0] && p.price <= filters.priceRange[1])
 
-    switch (sort) {
-      case 'price_asc': list.sort((a, b) => a.price - b.price); break
-      case 'price_desc': list.sort((a, b) => b.price - a.price); break
-      case 'best_rated': list.sort((a, b) => b.rating - a.rating); break
-      case 'newest': list.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0)); break
-    }
-
     return list
-  }, [filters, sort])
+  }, [products, filters])
 
-  const handleClear = () => setFilters(DEFAULT_FILTERS)
+  const handleClear = () => {
+    setFilters(DEFAULT_FILTERS)
+    setPage(0)
+  }
+
+  const handleFiltersChange = (f: FilterState) => {
+    setFilters(f)
+    setPage(0)
+  }
+
+  const handleSortChange = (s: SortOption) => {
+    setSort(s)
+    setPage(0)
+  }
 
   const sidebarFilters = (
-    <FiltersPanel filters={filters} onChange={setFilters} onClear={handleClear} />
+    <FiltersPanel filters={filters} onChange={handleFiltersChange} onClear={handleClear} />
   )
 
   return (
@@ -77,24 +90,35 @@ export default function ProductsPage() {
 
             {/* Top bar */}
             <TopBar
-              total={filtered.length}
+              total={totalElements}
               sort={sort}
               view={view}
-              onSortChange={setSort}
+              onSortChange={handleSortChange}
               onViewChange={setView}
               onOpenMobileFilters={() => setMobileOpen(true)}
             />
 
             {/* Active filter chips */}
-            <ActiveFilters filters={filters} onChange={setFilters} onClear={handleClear} />
+            <ActiveFilters filters={filters} onChange={handleFiltersChange} onClear={handleClear} />
+
+            {/* Error state */}
+            {isError && (
+              <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+                <AlertCircle className="size-10 text-destructive/60" />
+                <div>
+                  <p className="font-semibold">Failed to load products</p>
+                  <p className="text-sm text-muted-foreground mt-1">Please check your connection and try again</p>
+                </div>
+              </div>
+            )}
 
             {/* Grid / List */}
-            {isLoading ? (
+            {!isError && (isLoading ? (
               <div className={view === 'grid'
                 ? 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4'
                 : 'flex flex-col gap-3'
               }>
-                {Array.from({ length: 8 }).map((_, i) => (
+                {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                   <ProductCardSkeleton key={i} view={view} />
                 ))}
               </div>
@@ -115,6 +139,52 @@ export default function ProductsPage() {
                 {filtered.map((product) => (
                   <ProductCard key={product.id} product={product} view={view} />
                 ))}
+              </div>
+            ))}
+
+            {/* Pagination */}
+            {!isLoading && !isError && totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                >
+                  <ChevronLeft className="size-4" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                    const pageIndex = totalPages <= 7
+                      ? i
+                      : page < 4
+                        ? i
+                        : page > totalPages - 5
+                          ? totalPages - 7 + i
+                          : page - 3 + i
+                    return (
+                      <Button
+                        key={pageIndex}
+                        variant={page === pageIndex ? 'default' : 'ghost'}
+                        size="sm"
+                        className="w-8 h-8 p-0 text-xs"
+                        onClick={() => setPage(pageIndex)}
+                      >
+                        {pageIndex + 1}
+                      </Button>
+                    )
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                >
+                  Next
+                  <ChevronRight className="size-4" />
+                </Button>
               </div>
             )}
 

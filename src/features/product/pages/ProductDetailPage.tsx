@@ -13,6 +13,7 @@ import {
   Store,
   Ruler,
   ZoomIn,
+  Tag,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -40,17 +41,34 @@ import {
 } from '@/components/ui/breadcrumb'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
-import { mockProduct, relatedProducts } from '@/features/product/data/mockProduct'
+import { relatedProducts } from '@/features/product/data/mockProduct'
+import { useProductDetail } from '@/features/product/hooks/useProduct'
+import type { ProductColor } from '@/features/product/types/productDetail.types'
+import { useCartStore } from '@/features/cart/store/cartStore'
+import { useAddToCart } from '@/features/cart/hooks/useCartHooks'
+import { useAuthStore } from '@/features/Auth/store/authStore'
 
 export default function ProductDetailPage() {
-  useParams() // id available for future API integration
+  const { id } = useParams<{ id: string }>()
+  const { data: product, isLoading, isError } = useProductDetail(Number(id))
+  const addItem = useCartStore((s) => s.addItem)
+  const { mutate: addToCartApi } = useAddToCart()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
   const [selectedImage, setSelectedImage] = useState(0)
-  const [selectedColor, setSelectedColor] = useState(mockProduct.colors[0])
-  const [selectedSize, setSelectedSize] = useState('M')
+  const [selectedColor, setSelectedColor] = useState<ProductColor | null>(null)
+  const [selectedSize, setSelectedSize] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [wishlisted, setWishlisted] = useState(false)
   const [showStickyBar, setShowStickyBar] = useState(false)
   const [isZoomed, setIsZoomed] = useState(false)
+
+  useEffect(() => {
+    if (product) {
+      setSelectedColor(product.colors[0] ?? null)
+      setSelectedSize(product.sizes[0] ?? '')
+    }
+  }, [product])
 
   // Sticky bar on scroll
   useEffect(() => {
@@ -62,20 +80,79 @@ export default function ProductDetailPage() {
   }, [])
 
   const handleAddToCart = () => {
+    if (!product) return
+    addItem({
+      id: product.id,
+      cartItemId: null,
+      title: product.title,
+      brand: product.brand,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      discountPercentage: product.discountPercentage,
+      image: product.images[0] ?? '',
+      color: selectedColor?.name ?? null,
+      size: selectedSize || null,
+      inStock: product.inStock,
+      quantity,
+    })
+    if (isAuthenticated) {
+      addToCartApi({ productId: product.id, quantity })
+    }
     toast.success('Added to cart!', {
-      description: `${mockProduct.title} (${selectedSize}, ${selectedColor.name}) × ${quantity}`,
+      description: `${product.title} × ${quantity}`,
+      action: { label: 'View Cart', onClick: () => window.location.assign('/cart') },
     })
   }
 
   const handleBuyNow = () => {
-    toast.success('Proceeding to checkout...', {
-      description: 'Redirecting you to the checkout page',
+    if (!product) return
+    addItem({
+      id: product.id,
+      cartItemId: null,
+      title: product.title,
+      brand: product.brand,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      discountPercentage: product.discountPercentage,
+      image: product.images[0] ?? '',
+      color: selectedColor?.name ?? null,
+      size: selectedSize || null,
+      inStock: product.inStock,
+      quantity,
     })
+    if (isAuthenticated) {
+      addToCartApi({ productId: product.id, quantity })
+    }
+    window.location.assign('/checkout')
   }
 
   const handleWishlist = () => {
     setWishlisted(!wishlisted)
     toast.success(wishlisted ? 'Removed from wishlist' : 'Added to wishlist!')
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading product...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError || !product) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-destructive">Failed to load product details. Please try again.</p>
+          <Button variant="outline" onClick={() => window.history.back()}>
+            Go Back
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   const scrollToReviews = () => {
@@ -123,25 +200,25 @@ export default function ProductDetailPage() {
             {/* Main Image */}
             <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted group">
               <img
-                src={mockProduct.images[selectedImage]}
-                alt={mockProduct.title}
+                src={product.images[selectedImage]}
+                alt={product.title}
                 className={cn(
                   'w-full h-full object-cover transition-transform duration-300',
                   isZoomed ? 'scale-150 cursor-zoom-out' : 'group-hover:scale-110 cursor-zoom-in'
                 )}
                 onClick={() => setIsZoomed(!isZoomed)}
               />
-              {mockProduct.isNew && (
+              {product.isNew && (
                 <Badge className="absolute top-4 left-4 bg-indigo-600 hover:bg-indigo-700">
                   New
                 </Badge>
               )}
-              {mockProduct.discount > 0 && (
+              {product.discountPercentage && product.discountPercentage > 0 && (
                 <Badge
                   variant="destructive"
                   className="absolute top-4 right-4 bg-red-600 hover:bg-red-700"
                 >
-                  -{mockProduct.discount}% OFF
+                  -{product.discountPercentage}% OFF
                 </Badge>
               )}
               <div className="absolute bottom-4 right-4 bg-black/50 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
@@ -152,7 +229,7 @@ export default function ProductDetailPage() {
 
             {/* Thumbnails */}
             <div className="flex gap-2">
-              {mockProduct.images.map((image, index) => (
+              {product.images.map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
@@ -173,8 +250,8 @@ export default function ProductDetailPage() {
           <div className="space-y-6">
             {/* Brand & Title */}
             <div>
-              <p className="text-sm text-muted-foreground mb-1">{mockProduct.brand}</p>
-              <h1 className="text-3xl font-bold text-foreground mb-3">{mockProduct.title}</h1>
+              {product.brand && <p className="text-sm text-muted-foreground mb-1">{product.brand}</p>}
+              <h1 className="text-3xl font-bold text-foreground mb-3">{product.title}</h1>
 
               {/* Rating */}
               <button
@@ -182,11 +259,11 @@ export default function ProductDetailPage() {
                 className="flex items-center gap-2 text-sm hover:underline"
               >
                 <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-0.5 rounded">
-                  <span className="font-semibold">{mockProduct.rating}</span>
+                  <span className="font-semibold">{product.rating}</span>
                   <Star className="w-3 h-3 fill-white" />
                 </div>
                 <span className="text-muted-foreground">
-                  {mockProduct.reviewCount.toLocaleString()} ratings & reviews
+                  {product.reviewCount.toLocaleString()} ratings & reviews
                 </span>
               </button>
             </div>
@@ -197,18 +274,24 @@ export default function ProductDetailPage() {
             <div className="space-y-2">
               <div className="flex items-baseline gap-3">
                 <span className="text-3xl font-bold text-foreground">
-                  ₹{mockProduct.price.toLocaleString()}
+                  ₹{product.price.toLocaleString()}
                 </span>
-                <span className="text-lg text-muted-foreground line-through">
-                  ₹{mockProduct.originalPrice.toLocaleString()}
-                </span>
-                <Badge variant="destructive" className="text-sm">
-                  {mockProduct.discount}% OFF
-                </Badge>
+                {product.originalPrice && (
+                  <span className="text-lg text-muted-foreground line-through">
+                    ₹{product.originalPrice.toLocaleString()}
+                  </span>
+                )}
+                {product.discountPercentage && product.discountPercentage > 0 && (
+                  <Badge variant="destructive" className="text-sm">
+                    {product.discountPercentage}% OFF
+                  </Badge>
+                )}
               </div>
-              <p className="text-sm text-green-600 font-medium">
-                You save ₹{(mockProduct.originalPrice - mockProduct.price).toLocaleString()}
-              </p>
+              {product.originalPrice && product.discountPercentage && product.discountPercentage > 0 && (
+                <p className="text-sm text-green-600 font-medium">
+                  You save ₹{(product.originalPrice - product.price).toLocaleString()}
+                </p>
+              )}
             </div>
 
             <Separator />
@@ -217,71 +300,75 @@ export default function ProductDetailPage() {
             <div>
               <h3 className="text-sm font-semibold mb-2">Description</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {mockProduct.description}
+                {product.description}
               </p>
             </div>
 
             <Separator />
 
             {/* Color Selector */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold">
-                  Color: <span className="font-normal text-muted-foreground">{selectedColor.name}</span>
-                </h3>
+            {product.colors.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold">
+                    Color: <span className="font-normal text-muted-foreground">{selectedColor?.name}</span>
+                  </h3>
+                </div>
+                <div className="flex gap-3">
+                  {product.colors.map((color) => (
+                    <button
+                      key={color.name}
+                      onClick={() => color.available && setSelectedColor(color)}
+                      disabled={!color.available}
+                      className={cn(
+                        'w-10 h-10 rounded-full border-2 transition-all relative',
+                        selectedColor?.name === color.name
+                          ? 'border-indigo-600 ring-2 ring-indigo-200 scale-110'
+                          : 'border-muted hover:border-indigo-300',
+                        !color.available && 'opacity-50 cursor-not-allowed'
+                      )}
+                      style={{ backgroundColor: color.hex }}
+                      title={color.name}
+                    >
+                      {!color.available && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-full h-0.5 bg-red-500 rotate-45"></div>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex gap-3">
-                {mockProduct.colors.map((color) => (
-                  <button
-                    key={color.name}
-                    onClick={() => color.available && setSelectedColor(color)}
-                    disabled={!color.available}
-                    className={cn(
-                      'w-10 h-10 rounded-full border-2 transition-all relative',
-                      selectedColor.name === color.name
-                        ? 'border-indigo-600 ring-2 ring-indigo-200 scale-110'
-                        : 'border-muted hover:border-indigo-300',
-                      !color.available && 'opacity-50 cursor-not-allowed'
-                    )}
-                    style={{ backgroundColor: color.hex }}
-                    title={color.name}
-                  >
-                    {!color.available && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-full h-0.5 bg-red-500 rotate-45"></div>
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* Size Selector */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold">Select Size</h3>
-                <button className="text-sm text-indigo-600 hover:underline flex items-center gap-1">
-                  <Ruler className="w-4 h-4" />
-                  Size Guide
-                </button>
-              </div>
-              <div className="flex gap-2">
-                {mockProduct.sizes.map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={cn(
-                      'w-14 h-12 rounded-lg border-2 font-medium text-sm transition-all',
-                      selectedSize === size
-                        ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
-                        : 'border-muted hover:border-indigo-300'
-                    )}
-                  >
-                    {size}
+            {product.sizes.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold">Select Size</h3>
+                  <button className="text-sm text-indigo-600 hover:underline flex items-center gap-1">
+                    <Ruler className="w-4 h-4" />
+                    Size Guide
                   </button>
-                ))}
+                </div>
+                <div className="flex gap-2">
+                  {product.sizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={cn(
+                        'w-14 h-12 rounded-lg border-2 font-medium text-sm transition-all',
+                        selectedSize === size
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
+                          : 'border-muted hover:border-indigo-300'
+                      )}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Quantity Selector */}
             <div>
@@ -337,54 +424,62 @@ export default function ProductDetailPage() {
             <Separator />
 
             {/* Delivery Info */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm">
-                <Truck className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">
-                    Delivery by <span className="text-green-600">{mockProduct.estimatedDelivery}</span>
-                  </p>
-                  {mockProduct.freeShipping && (
-                    <p className="text-xs text-muted-foreground">Free shipping on this order</p>
-                  )}
+            {(product.estimatedDelivery || product.freeShipping) && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <Truck className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    {product.estimatedDelivery && (
+                      <p className="font-medium">
+                        Delivery by <span className="text-green-600">{product.estimatedDelivery}</span>
+                      </p>
+                    )}
+                    {product.freeShipping && (
+                      <p className="text-xs text-muted-foreground">Free shipping on this order</p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Offers */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Available Offers</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {mockProduct.offers.map((offer, index) => (
-                  <div key={index} className="flex gap-3 text-sm">
-                    <offer.icon className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">{offer.title}</p>
-                      <p className="text-xs text-muted-foreground">{offer.description}</p>
+            {product.offers.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Available Offers</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {product.offers.map((offer, index) => (
+                    <div key={index} className="flex gap-3 text-sm">
+                      <Tag className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium">{offer.title}</p>
+                        <p className="text-xs text-muted-foreground">{offer.description}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Seller Info */}
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <Store className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">{mockProduct.seller.name}</p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                    <span>{mockProduct.seller.rating} rating</span>
+            {product.seller && (
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Store className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">{product.seller.name}</p>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                      <span>{product.seller.rating} rating</span>
+                    </div>
                   </div>
                 </div>
+                <Button variant="link" className="text-indigo-600 h-auto p-0" asChild>
+                  <Link to={`/seller/${product.seller.id}`}>View Store</Link>
+                </Button>
               </div>
-              <Button variant="link" className="text-indigo-600 h-auto p-0" asChild>
-                <Link to={`/seller/${mockProduct.seller.id}`}>View Store</Link>
-              </Button>
-            </div>
+            )}
           </div>
         </div>
 
@@ -399,7 +494,7 @@ export default function ProductDetailPage() {
                 Specifications
               </TabsTrigger>
               <TabsTrigger value="reviews" className="text-base">
-                Reviews ({mockProduct.reviewCount})
+                Reviews ({product.reviewCount})
               </TabsTrigger>
               <TabsTrigger value="qna" className="text-base">
                 Q&A
@@ -410,7 +505,7 @@ export default function ProductDetailPage() {
             <TabsContent value="description" className="mt-6">
               <div className="prose prose-sm max-w-none">
                 <h3 className="text-lg font-semibold mb-4">Product Description</h3>
-                <p className="text-muted-foreground leading-relaxed mb-4">{mockProduct.description}</p>
+                <p className="text-muted-foreground leading-relaxed mb-4">{product.description}</p>
                 <h4 className="text-base font-semibold mb-3">Key Features:</h4>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li>• Premium cotton blend fabric for all-day comfort</li>
@@ -426,22 +521,26 @@ export default function ProductDetailPage() {
             {/* Specifications Tab */}
             <TabsContent value="specifications" className="mt-6">
               <h3 className="text-lg font-semibold mb-4">Product Specifications</h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-1/3">Specification</TableHead>
-                    <TableHead>Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockProduct.specifications.map((spec, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{spec.label}</TableCell>
-                      <TableCell className="text-muted-foreground">{spec.value}</TableCell>
+              {product.specifications.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-1/3">Specification</TableHead>
+                      <TableHead>Details</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {product.specifications.map((spec, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{spec.label}</TableCell>
+                        <TableCell className="text-muted-foreground">{spec.value}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-sm text-muted-foreground">No specifications available.</p>
+              )}
             </TabsContent>
 
             {/* Reviews Tab */}
@@ -455,14 +554,14 @@ export default function ProductDetailPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="text-center">
-                        <div className="text-5xl font-bold mb-2">{mockProduct.rating}</div>
+                        <div className="text-5xl font-bold mb-2">{product.rating}</div>
                         <div className="flex justify-center mb-2">
                           {Array.from({ length: 5 }).map((_, i) => (
                             <Star
                               key={i}
                               className={cn(
                                 'w-5 h-5',
-                                i < Math.floor(mockProduct.rating)
+                                i < Math.floor(product.rating)
                                   ? 'fill-yellow-400 text-yellow-400'
                                   : 'text-gray-300'
                               )}
@@ -470,14 +569,14 @@ export default function ProductDetailPage() {
                           ))}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          Based on {mockProduct.reviewCount.toLocaleString()} reviews
+                          Based on {product.reviewCount.toLocaleString()} reviews
                         </p>
                       </div>
 
                       <Separator />
 
                       <div className="space-y-2">
-                        {mockProduct.ratingDistribution.map((dist) => (
+                        {product.ratingDistribution.map((dist) => (
                           <div key={dist.stars} className="flex items-center gap-3">
                             <span className="text-sm w-8">{dist.stars} ★</span>
                             <Progress value={dist.percentage} className="flex-1 h-2" />
@@ -493,7 +592,7 @@ export default function ProductDetailPage() {
 
                 {/* Reviews List */}
                 <div className="lg:col-span-2 space-y-4">
-                  {mockProduct.reviews.map((review) => (
+                  {product.reviews.length > 0 ? product.reviews.map((review) => (
                     <Card key={review.id}>
                       <CardContent className="pt-6">
                         <div className="flex gap-4">
@@ -521,7 +620,9 @@ export default function ProductDetailPage() {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                  )) : (
+                    <p className="text-sm text-muted-foreground">No reviews yet. Be the first to review!</p>
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -535,7 +636,7 @@ export default function ProductDetailPage() {
                 </div>
 
                 <div className="space-y-4">
-                  {mockProduct.qna.map((item) => (
+                  {product.qna.length > 0 ? product.qna.map((item) => (
                     <Card key={item.id}>
                       <CardContent className="pt-6 space-y-3">
                         <div>
@@ -558,7 +659,9 @@ export default function ProductDetailPage() {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                  )) : (
+                    <p className="text-sm text-muted-foreground">No questions yet.</p>
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -581,25 +684,25 @@ export default function ProductDetailPage() {
 
           <ScrollArea className="w-full whitespace-nowrap">
             <div className="flex gap-4 pb-4">
-              {relatedProducts.map((product) => (
-                <Card key={product.id} className="w-60 shrink-0 group cursor-pointer hover:shadow-lg transition-shadow">
+              {relatedProducts.map((relProduct) => (
+                <Card key={relProduct.id} className="w-60 shrink-0 group cursor-pointer hover:shadow-lg transition-shadow">
                   <CardContent className="p-0">
                     <div className="relative aspect-square overflow-hidden rounded-t-lg">
                       <img
-                        src={product.image}
-                        alt={product.title}
+                        src={relProduct.image}
+                        alt={relProduct.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
                     <div className="p-4">
-                      <h3 className="font-medium text-sm mb-2 line-clamp-2">{product.title}</h3>
+                      <h3 className="font-medium text-sm mb-2 line-clamp-2">{relProduct.title}</h3>
                       <div className="flex items-center gap-1 mb-2">
                         <div className="flex items-center gap-1 bg-green-600 text-white px-1.5 py-0.5 rounded text-xs">
-                          <span className="font-semibold">{product.rating}</span>
+                          <span className="font-semibold">{relProduct.rating}</span>
                           <Star className="w-2.5 h-2.5 fill-white" />
                         </div>
                       </div>
-                      <p className="text-lg font-bold">₹{product.price.toLocaleString()}</p>
+                      <p className="text-lg font-bold">₹{relProduct.price.toLocaleString()}</p>
                     </div>
                   </CardContent>
                 </Card>

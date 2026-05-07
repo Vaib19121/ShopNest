@@ -1,5 +1,6 @@
-import { Heart, ShoppingCart, Star } from 'lucide-react'
+import { Heart, ShoppingCart, Star, Eye } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -19,7 +20,7 @@ export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
       <Card className="group overflow-hidden border hover:shadow-md transition-shadow duration-200 py-0">
         <CardContent className="p-0 flex">
           {/* Image */}
-          <div className="relative w-44 shrink-0">
+          <div className="relative w-44 shrink-0 overflow-hidden">
             <OptimizedImage
               src={product.image}
               alt={product.title}
@@ -34,6 +35,16 @@ export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
                 <span className="text-xs font-medium text-muted-foreground">Out of stock</span>
               </div>
             )}
+            {/* View Product overlay */}
+            <Link
+              to={`/products/${product.id}`}
+              className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+            >
+              <span className="flex items-center gap-1.5 bg-white text-foreground text-xs font-semibold px-3 py-1.5 rounded-full shadow-md translate-y-2 group-hover:translate-y-0 transition-transform duration-200">
+                <Eye className="size-3.5" />
+                View Product
+              </span>
+            </Link>
           </div>
 
           {/* Info */}
@@ -106,10 +117,20 @@ export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
           {/* Wishlist */}
           <button
             onClick={() => setWishlisted((w) => !w)}
-            className="absolute top-2 right-2 size-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-2 right-2 size-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
           >
             <Heart className={`size-4 transition-colors ${wishlisted ? 'fill-red-500 text-red-500' : 'text-foreground'}`} />
           </button>
+          {/* View Product overlay */}
+          <Link
+            to={`/products/${product.id}`}
+            className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          >
+            <span className="flex items-center gap-1.5 bg-white text-foreground text-xs font-semibold px-3 py-2 rounded-full shadow-md translate-y-2 group-hover:translate-y-0 transition-transform duration-200">
+              <Eye className="size-3.5" />
+              View Product
+            </span>
+          </Link>
         </div>
 
         {/* Info */}

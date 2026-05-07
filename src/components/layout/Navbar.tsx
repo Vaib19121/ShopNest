@@ -1,11 +1,21 @@
 import { useState } from 'react'
-import { ShoppingBag, Search, Heart, ShoppingCart, Menu, X, User } from 'lucide-react'
+import { ShoppingBag, Search, Heart, ShoppingCart, Menu, User, LogIn, UserPlus, LogOut, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useNavigate } from 'react-router'
+import { useAuthStore } from '@/features/Auth/store/authStore'
+import { useCartStore } from '@/features/cart/store/cartStore'
 
 const navLinks = [
   { label: 'Home', href: '/' },
@@ -18,10 +28,15 @@ const navLinks = [
 export function Navbar() {
   const navigation = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false)
+  const { isAuthenticated, user, logout } = useAuthStore()
+  const cartItems = useCartStore((s) => s.items)
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
-  const handleAccountClick = () => {
-    navigation('/auth/login');
+  const handleLogout = () => {
+    logout()
+    navigation('/auth/login')
   }
+  
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -67,20 +82,58 @@ export function Navbar() {
               <Search className="h-5 w-5" />
             </Button>
 
-            <Button variant="ghost" size="icon" className="hidden sm:flex">
+            <Button variant="ghost" size="icon" className="hidden sm:flex" onClick={() => navigation('/wishlist')}>
               <Heart className="h-5 w-5" />
             </Button>
 
-            <Button variant="ghost" size="icon" className="relative">
+            <Button variant="ghost" size="icon" className="relative" onClick={() => navigation('/cart')}>
               <ShoppingCart className="h-5 w-5" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]">
-                3
-              </Badge>
+              {totalItems > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]">
+                  {totalItems > 99 ? '99+' : totalItems}
+                </Badge>
+              )}
             </Button>
 
-            <Button variant="ghost" size="icon" className="hidden sm:flex" onClick={handleAccountClick}>
-              <User className="h-5 w-5" />
-            </Button>
+            {/* User dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="hidden sm:flex">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {isAuthenticated ? (
+                  <>
+                    <DropdownMenuLabel className="font-normal">
+                      <p className="text-sm font-medium">{user?.first_name ? `${user.first_name} ${user.last_name ?? ''}`.trim() : user?.email}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigation('/account/profile')}>
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={() => navigation('/auth/login')}>
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Login
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigation('/auth/register')}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Register
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Mobile Menu */}
             <Sheet>
@@ -111,9 +164,25 @@ export function Navbar() {
                   <Button variant="outline" className="w-full justify-start gap-2">
                     <Heart className="h-4 w-4" /> Wishlist
                   </Button>
-                  <Button variant="outline" className="w-full justify-start gap-2" onClick={handleAccountClick}>
-                    <User className="h-4 w-4" /> Account
-                  </Button>
+                  {isAuthenticated ? (
+                    <>
+                      <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigation('/account/profile')}>
+                        <LayoutDashboard className="h-4 w-4" /> Profile
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start gap-2 text-destructive" onClick={handleLogout}>
+                        <LogOut className="h-4 w-4" /> Logout
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigation('/auth/login')}>
+                        <LogIn className="h-4 w-4" /> Login
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigation('/auth/register')}>
+                        <UserPlus className="h-4 w-4" /> Register
+                      </Button>
+                    </>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>

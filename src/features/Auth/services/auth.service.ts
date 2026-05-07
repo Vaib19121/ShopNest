@@ -44,7 +44,6 @@ export interface ForgotPasswordResponse {
 export const authService = {
   login: async (data: LoginFormValues): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>(ENDPOINTS.AUTH.LOGIN, data);
-    
     return response.data;
   },
 
@@ -74,11 +73,6 @@ export const authService = {
     return response.data;
   },
 
-  logout: () => {
-    const refresh = Cookies.get("refresh-token");
-    const response = api.post(ENDPOINTS.AUTH.LOGOUT, { refresh });
-    return response;
-  },
 
   // Get current user
   getCurrentUser: async (): Promise<{ data: User }> => {

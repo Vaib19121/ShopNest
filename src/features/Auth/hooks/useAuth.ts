@@ -21,15 +21,14 @@ export const useLogin = () => {
     mutationFn: authService.login,
     onSuccess: (data) => {
       setUser({
-        email: data.data?.email || '',
-        role: data.data?.role || '',
+       ...data.data,
       }, {
         accessToken: data.data?.token || '',
         refreshToken: data.data?.refreshToken || '',
       });
       toast.success(data.message || "Login successful!");
       queryClient.invalidateQueries({ queryKey: authKeys.currentUser() });
-      navigate("/dashboard");
+      navigate("/");
     },
     onError: (error) => {
       toast.error(error.message || "Login failed");
@@ -46,8 +45,7 @@ export const useRegister = () => {
     mutationFn: authService.register,
     onSuccess: (data) => {
       setUser({
-        email: data?.data?.email || '',
-        role: data?.data?.role || '',
+       ...data.data,
       }, {
         accessToken: data?.data?.token || '',
         refreshToken: data?.data?.refreshToken || '',
@@ -55,7 +53,7 @@ export const useRegister = () => {
       toast.success(data.message || "Registration successful!");
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: authKeys.currentUser() });
-      navigate("/dashboard");
+      navigate("/");
     },
     onError: (error) => {
       toast.error(error.message || "Registration failed");
@@ -115,29 +113,7 @@ export const useResetPassword = () => {
   });
 };
 
-// Custom hook for logout
-export const useLogout = () => {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const logout = useAuthStore((state) => state.logout);
 
-  return useMutation<void, Error, void>({
-    mutationFn: () => {
-      authService.logout();
-      return Promise.resolve();
-    },
-    onSuccess: () => {
-      logout();
-      toast.success("Logged out successfully!");
-      // Clear all cached data
-      queryClient.clear();
-      navigate("/login");
-    },
-    onError: (error) => {
-      toast.error(error.message || "Logout failed");
-    },
-  });
-};
 
 // Custom hook to get current user
 export const useCurrentUser = () => {
