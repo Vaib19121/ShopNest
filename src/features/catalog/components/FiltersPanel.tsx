@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Label } from '@/components/ui/label'
 import { Star } from 'lucide-react'
-import { CATEGORIES, BRANDS, COLORS, PRICE_MIN, PRICE_MAX } from '../data/mockProducts'
+import { BRANDS, COLORS, PRICE_MIN, PRICE_MAX } from '../data/mockProducts'
+import { useCategories } from '../hooks/useProducts'
 import type { FilterState } from '../types/product.types'
 
 interface FiltersProps {
@@ -21,6 +22,7 @@ interface FiltersProps {
 
 export function FiltersPanel({ filters, onChange, onClear }: FiltersProps) {
   const [brandSearch, setBrandSearch] = useState('')
+  const { data: categories, isLoading: loadingCategories } = useCategories()
 
   const activeCount =
     filters.categories.length +
@@ -71,20 +73,30 @@ export function FiltersPanel({ filters, onChange, onClear }: FiltersProps) {
           </AccordionTrigger>
           <AccordionContent className="px-4 pb-4">
             <div className="flex flex-col gap-2.5">
-              {CATEGORIES.map((cat) => (
-                <div key={cat} className="flex items-center gap-2.5">
-                  <Checkbox
-                    id={`cat-${cat}`}
-                    checked={filters.categories.includes(cat)}
-                    onCheckedChange={() =>
-                      onChange({ ...filters, categories: toggleArr(filters.categories, cat) })
-                    }
-                  />
-                  <Label htmlFor={`cat-${cat}`} className="text-sm cursor-pointer font-normal">
-                    {cat}
-                  </Label>
-                </div>
-              ))}
+              {loadingCategories ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-2.5">
+                    <div className="size-4 rounded bg-muted animate-pulse" />
+                    <div className="h-3.5 w-24 rounded bg-muted animate-pulse" />
+                  </div>
+                ))
+              ) : (
+                categories?.map((cat) => (
+                  <div key={cat.id} className="flex items-center gap-2.5">
+                    <Checkbox
+                      id={`cat-${cat.id}`}
+                      checked={filters.categories.includes(cat.name)}
+                      onCheckedChange={() =>
+                        onChange({ ...filters, categories: toggleArr(filters.categories, cat.name) })
+                      }
+                    />
+                    <Label htmlFor={`cat-${cat.id}`} className="text-sm cursor-pointer font-normal flex-1">
+                      {cat.name}
+                    </Label>
+                    <span className="text-xs text-muted-foreground">{cat.productCount}</span>
+                  </div>
+                ))
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>

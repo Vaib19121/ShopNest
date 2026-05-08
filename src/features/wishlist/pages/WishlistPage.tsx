@@ -209,7 +209,7 @@ export default function WishlistPage() {
                     variant="outline"
                     className="w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                     disabled={isRemoving}
-                    onClick={() => handleRemove(item.id, item.productName)}
+                    onClick={() => handleRemove(item.productId, item.productName)}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>

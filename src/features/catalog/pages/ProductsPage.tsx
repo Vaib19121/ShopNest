@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { PackageX, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
@@ -8,7 +8,7 @@ import { TopBar } from '../components/TopBar'
 import { ActiveFilters } from '../components/ActiveFilters'
 import { PRICE_MIN, PRICE_MAX } from '../data/mockProducts'
 import type { FilterState, SortOption, ViewMode } from '../types/product.types'
-import { useProducts } from '../hooks/useProducts'
+import { useFilteredProducts } from '../hooks/useProducts'
 
 const DEFAULT_FILTERS: FilterState = {
   categories: [],
@@ -17,9 +17,11 @@ const DEFAULT_FILTERS: FilterState = {
   rating: null,
   inStockOnly: false,
   colors: [],
+  sizes: [],
+  searchQuery: '',
 }
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 12
 
 export default function ProductsPage() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
@@ -28,23 +30,10 @@ export default function ProductsPage() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [page, setPage] = useState(0)
 
-  const { data: pageData, isLoading, isError } = useProducts(page, sort, PAGE_SIZE)
+  const { data: pageData, isLoading, isError } = useFilteredProducts(filters, page, sort, PAGE_SIZE)
   const products = pageData?.content ?? []
   const totalPages = pageData?.totalPages ?? 0
   const totalElements = pageData?.totalElements ?? 0
-
-  const filtered = useMemo(() => {
-    let list = [...products]
-
-    if (filters.categories.length) list = list.filter((p) => filters.categories.includes(p.category))
-    if (filters.brands.length) list = list.filter((p) => filters.brands.includes(p.brand))
-    if (filters.inStockOnly) list = list.filter((p) => p.inStock)
-    if (filters.rating !== null) list = list.filter((p) => p.rating >= filters.rating!)
-    if (filters.colors.length) list = list.filter((p) => p.colors.some((c) => filters.colors.includes(c)))
-    list = list.filter((p) => p.price >= filters.priceRange[0] && p.price <= filters.priceRange[1])
-
-    return list
-  }, [products, filters])
 
   const handleClear = () => {
     setFilters(DEFAULT_FILTERS)
@@ -122,7 +111,7 @@ export default function ProductsPage() {
                   <ProductCardSkeleton key={i} view={view} />
                 ))}
               </div>
-            ) : filtered.length === 0 ? (
+            ) : products.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
                 <PackageX className="size-12 text-muted-foreground/50" />
                 <div>
@@ -136,7 +125,7 @@ export default function ProductsPage() {
                 ? 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4'
                 : 'flex flex-col gap-3'
               }>
-                {filtered.map((product) => (
+                {products.map((product) => (
                   <ProductCard key={product.id} product={product} view={view} />
                 ))}
               </div>

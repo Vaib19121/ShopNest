@@ -20,7 +20,6 @@ import { useCartStore } from '@/features/cart/store/cartStore'
 const navLinks = [
   { label: 'Home', href: '/' },
   { label: 'Shop', href: '/products' },
-  { label: 'Categories', href: '#categories' },
   { label: 'Deals', href: '#deals' },
   { label: 'About', href: '#about' },
 ]
@@ -28,6 +27,7 @@ const navLinks = [
 export function Navbar() {
   const navigation = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const { isAuthenticated, user, logout } = useAuthStore()
   const cartItems = useCartStore((s) => s.items)
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0)
@@ -36,7 +36,14 @@ export function Navbar() {
     logout()
     navigation('/auth/login')
   }
-  
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    const q = searchQuery.trim()
+    if (!q) return
+    navigation(`/search?q=${encodeURIComponent(q)}&page=0`)
+    setSearchOpen(false)
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -63,11 +70,15 @@ export function Navbar() {
 
           {/* Desktop Search */}
           <div className="hidden md:flex items-center relative flex-1 max-w-sm">
-            <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search products..."
-              className="pl-9 bg-muted/50 border-0 focus-visible:ring-1"
-            />
+            <form onSubmit={handleSearch} className="w-full relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="pl-9 bg-muted/50 border-0 focus-visible:ring-1"
+              />
+            </form>
           </div>
 
           {/* Actions */}
@@ -192,8 +203,16 @@ export function Navbar() {
         {/* Mobile search bar */}
         {searchOpen && (
           <div className="md:hidden pb-3 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search products..." className="pl-9 bg-muted/50" />
+            <form onSubmit={handleSearch}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="pl-9 bg-muted/50"
+                autoFocus
+              />
+            </form>
           </div>
         )}
       </div>

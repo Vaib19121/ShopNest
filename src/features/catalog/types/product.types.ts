@@ -1,6 +1,6 @@
 export interface Product {
   id: string
-  title: string
+  name: string
   brand: string
   category: string
   price: number
@@ -24,4 +24,6 @@ export interface FilterState {
   rating: number | null
   inStockOnly: boolean
   colors: string[]
+  sizes: string[]
+  searchQuery: string
 }

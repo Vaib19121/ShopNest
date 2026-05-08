@@ -20,6 +20,7 @@ const ResetPasswordPage = lazy(() => import('@/features/Auth/pages/ResetPassword
 const LandingPage = lazy(() => import('@/features/landingpage').then((m) => ({ default: m.LandingPage })))
 const ProductsPage = lazy(() => import('@/features/catalog').then((m) => ({ default: m.ProductsPage })))
 const ProductDetailPage = lazy(() => import('@/features/product/pages/ProductDetailPage'))
+const SearchPage = lazy(() => import('@/features/catalog/pages/SearchPage'))
 
 // Protected pages
 const CartPage = lazy(() => import('@/features/cart/pages/CartPage'))
@@ -108,6 +109,10 @@ export const router = createBrowserRouter([
           {
             path: '/products/:id',
             element: <ProductDetailPage />,
+          },
+          {
+            path: '/search',
+            element: <SearchPage />,
           },
           { path: '*', element: <NotFoundPage /> },
 

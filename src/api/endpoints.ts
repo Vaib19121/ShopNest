@@ -11,6 +11,8 @@ const ENDPOINTS = {
   PRODUCTS:{
     GET_PRODUCTS: '/products',
     GET_PRODUCT_DETAIL: (id: number) => `/products/${id}/`,
+    FILTER_PRODUCTS: '/products/filter',
+    SEARCH_PRODUCTS: '/products/search',
   },
   CART:{
     GET_CART: '/cart',
@@ -24,6 +26,9 @@ const ENDPOINTS = {
       ADD_TO_WISHLIST: '/wishlist/items',
       REMOVE_FROM_WISHLIST_BY_ID: (id: number) => `/wishlist/items/${id}`,
       CLEAR_WISHLIST: '/wishlist',
+  },
+  CATEGORIES:{
+    GET_CATEGORIES: '/categories',
   }
 } as const
 

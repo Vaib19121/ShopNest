@@ -1,7 +1,7 @@
 export interface CartItem {
   id: number
   cartItemId: number | null  // API cart item ID, used for DELETE /cart/items/:id
-  title: string
+  name: string
   brand: string | null
   price: number
   originalPrice: number | null

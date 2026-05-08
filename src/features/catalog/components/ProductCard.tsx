@@ -1,11 +1,14 @@
 import { Heart, ShoppingCart, Star, Eye } from 'lucide-react'
-import { useState } from 'react'
 import { Link } from 'react-router'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { OptimizedImage } from '@/components/ui/optimized-image'
 import type { Product } from '../types/product.types'
+import { useWishlistQuery, useAddToWishlist, useRemoveFromWishlist } from '@/features/wishlist/hooks/useWishlistHooks'
+import { useAuthStore } from '@/features/Auth/store/authStore'
+import { useAddToCart } from '@/features/cart/hooks/useCartHooks'
 
 interface ProductCardProps {
   product: Product
@@ -13,7 +16,46 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
-  const [wishlisted, setWishlisted] = useState(false)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const { data: wishlistData } = useWishlistQuery()
+  const { mutate: addToWishlistApi } = useAddToWishlist()
+  const { mutate: removeFromWishlistApi } = useRemoveFromWishlist()
+  const { mutate: addToCartApi } = useAddToCart()
+
+  const wishlistItem = wishlistData?.items.find((i) => i.productId === Number(product.id))
+  const wishlisted = !!wishlistItem
+  console.log("Product",product)
+
+  const handleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!isAuthenticated) {
+      toast.error('Sign in to save to wishlist')
+      return
+    }
+    if (wishlisted && wishlistItem) {
+      removeFromWishlistApi(wishlistItem.id)
+    } else {
+      addToWishlistApi({ productId: Number(product.id) })
+    }
+  }
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!isAuthenticated) {
+      toast.error('Sign in to add to cart')
+      return
+    }
+    if (!product.inStock) {
+      toast.error('Product is out of stock')
+      return
+    }
+    addToCartApi({ productId: Number(product.id), quantity: 1 })
+    toast.success('Added to cart!', {
+      description: `${product.name} × ${1}`,
+      action: { label: 'View Cart', onClick: () => window.location.assign('/cart') },
+    })
+  }
+
 
   if (view === 'list') {
     return (
@@ -23,7 +65,7 @@ export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
           <div className="relative w-44 shrink-0 overflow-hidden">
             <OptimizedImage
               src={product.image}
-              alt={product.title}
+              alt={product.name}
               containerClassName="w-full h-44"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
@@ -52,7 +94,7 @@ export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">{product.brand}</p>
               <h3 className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                {product.title}
+                {product.name}
               </h3>
               <div className="flex items-center gap-1 mt-1.5">
                 <div className="flex">
@@ -79,13 +121,13 @@ export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
                   variant="ghost"
                   size="icon"
                   className="size-8 shrink-0"
-                  onClick={() => setWishlisted((w) => !w)}
+                  onClick={handleWishlist}
                 >
                   <Heart className={`size-4 transition-colors ${wishlisted ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
                 </Button>
-                <Button size="sm" disabled={!product.inStock} className="gap-1.5 text-xs">
+                <Button size="sm" disabled={!product.inStock} className="gap-1.5 text-xs" onClick={handleAddToCart}>
                   <ShoppingCart className="size-3.5" />
-                  Add to Cart
+                  {product.inStock ? 'Add to Cart' : 'Out of Stock'}
                 </Button>
               </div>
             </div>
@@ -102,7 +144,7 @@ export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
         <div className="relative aspect-[4/5] w-full overflow-hidden">
           <OptimizedImage
             src={product.image}
-            alt={product.title}
+            alt={product.name}
             containerClassName="w-full h-full"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
@@ -116,7 +158,7 @@ export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
           )}
           {/* Wishlist */}
           <button
-            onClick={() => setWishlisted((w) => !w)}
+            onClick={handleWishlist}
             className="absolute top-2 right-2 size-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
           >
             <Heart className={`size-4 transition-colors ${wishlisted ? 'fill-red-500 text-red-500' : 'text-foreground'}`} />
@@ -137,7 +179,7 @@ export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
         <div className="p-3 flex flex-col gap-1">
           <p className="text-xs text-muted-foreground">{product.brand}</p>
           <h3 className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-            {product.title}
+            {product.name}
           </h3>
 
           {/* Rating */}
@@ -166,7 +208,8 @@ export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
           <Button
             size="sm"
             disabled={!product.inStock}
-            className="mt-2 w-full gap-1.5 text-xs"
+            className="mt-2 w-full gap-1.5 text-xs hover:bg-green-900"
+            onClick={handleAddToCart}
           >
             <ShoppingCart className="size-3.5" />
             {product.inStock ? 'Add to Cart' : 'Out of Stock'}

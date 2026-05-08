@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Heart, ShoppingCart, Star, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { useAuthStore } from '@/features/Auth/store/authStore'
 
 // ────────────────────────────────────────────────────────────────────────────────
 // Types
@@ -168,9 +170,11 @@ interface ProductCardProps {
   product: Product
   isWishlisted: boolean
   onToggleWishlist: (id: number) => void
+  onAddToCart: (id: number) => void
+  onViewProduct: (id: number) => void
 }
 
-function ProductCard({ product, isWishlisted, onToggleWishlist }: ProductCardProps) {
+function ProductCard({ product, isWishlisted, onToggleWishlist, onAddToCart, onViewProduct }: ProductCardProps) {
   return (
     <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-border/60 p-0">
       {/* Product Image Area */}
@@ -187,6 +191,7 @@ function ProductCard({ product, isWishlisted, onToggleWishlist }: ProductCardPro
           <Button
             size="sm"
             variant="secondary"
+            onClick={() => onViewProduct(product.id)}
             className="opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-400 shadow-lg"
           >
             View Product
@@ -231,7 +236,7 @@ function ProductCard({ product, isWishlisted, onToggleWishlist }: ProductCardPro
       </CardContent>
 
       <CardFooter className="p-4 pt-2">
-        <Button size="sm" className="w-full gap-2">
+        <Button size="sm" className="w-full gap-2" onClick={() => onAddToCart(product.id)}>
           <ShoppingCart className="h-3.5 w-3.5" /> Add to Cart
         </Button>
       </CardFooter>
@@ -242,9 +247,30 @@ function ProductCard({ product, isWishlisted, onToggleWishlist }: ProductCardPro
 
 export function FeaturedProducts() {
   const [wishlist, setWishlist] = useState<number[]>([])
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const navigate = useNavigate()
+
+  const requireAuth = (action: () => void) => {
+    if (!isAuthenticated) {
+      navigate('/login')
+    } else {
+      action()
+    }
+  }
 
   const toggleWishlist = (id: number) =>
-    setWishlist((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
+    requireAuth(() =>
+      setWishlist((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
+    )
+
+  const handleAddToCart = (id: number) =>
+    requireAuth(() => {
+      // TODO: wire up addToCart mutation
+      console.log('add to cart', id)
+    })
+
+  const handleViewProduct = (id: number) =>
+    requireAuth(() => navigate(`/products/${id}`))
 
   return (
     <section id="shop" className="py-16 md:py-24 bg-muted/20">
@@ -259,6 +285,8 @@ export function FeaturedProducts() {
               product={product}
               isWishlisted={wishlist.includes(product.id)}
               onToggleWishlist={toggleWishlist}
+              onAddToCart={handleAddToCart}
+              onViewProduct={handleViewProduct}
             />
           ))}
         </div>
