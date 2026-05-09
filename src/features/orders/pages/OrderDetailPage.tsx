@@ -53,7 +53,7 @@ export default function OrderDetailPage() {
   const navigate = useNavigate()
   const orderId = id ? Number(id) : null
 
-  const { data: order, isLoading, isError, error } = useOrderById(orderId)
+  const { data: order, isLoading, isPlaceholderData, isError, error } = useOrderById(orderId)
 
   const cfg = order
     ? (STATUS_CONFIG[order.status as ApiOrderStatus] ?? STATUS_CONFIG.PENDING)
@@ -73,12 +73,15 @@ export default function OrderDetailPage() {
           >
             <ArrowLeft className="size-4" />
           </Button>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold text-foreground leading-tight">Order Details</h1>
             {order && (
               <p className="text-xs text-muted-foreground mt-0.5">#{order.id}</p>
             )}
           </div>
+          {isPlaceholderData && (
+            <Loader2 className="size-4 animate-spin text-muted-foreground shrink-0" />
+          )}
         </div>
 
         {/* Loading */}
