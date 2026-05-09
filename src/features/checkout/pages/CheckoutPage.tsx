@@ -103,8 +103,9 @@ function PaymentStep({ productId, quantity, description, shippingDetails }: Paym
     mutate({ productId, quantity, description })
   }
 
-  function handlePaymentSuccess(orderId: number) {
-    navigate(`/checkout/confirmation?orderId=${orderId}`)
+  function handlePaymentSuccess() {
+    console.log('Payment successful for orderId:', intent)
+    navigate(`/checkout/confirmation?orderId=${intent?.orderId}`)
   }
 
   function handlePaymentError(message: string) {

@@ -35,26 +35,19 @@ export default function OrderConfirmationPage() {
 
   const orderIdStr = params.get('orderId')
   const orderId = orderIdStr ? Number(orderIdStr) : null
-  const redirectStatus: RedirectStatus = params.get('redirect_status')
 
-  const isFailure =
-    redirectStatus !== null &&
-    redirectStatus !== 'succeeded' &&
-    redirectStatus !== 'processing'
 
-  const isProcessing = redirectStatus === 'processing'
-
-  const { data: order, isLoading, isError } = useOrderById(isFailure ? null : orderId)
+  const { data: order, isLoading, isError } = useOrderById(orderId)
 
   useEffect(() => {
-    if (!isFailure) clearCart()
-  }, [isFailure, clearCart])
+    if (orderId) clearCart()
+  }, [orderId, clearCart])
 
   useEffect(() => {
-    if (!orderId && !redirectStatus) navigate('/', { replace: true })
-  }, [orderId, redirectStatus, navigate])
+    if (!orderId) navigate('/', { replace: true })
+  }, [orderId, navigate])
 
-  if (isFailure) return <FailurePage />
+  if (!orderId) return <FailurePage />
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-16">
@@ -66,21 +59,13 @@ export default function OrderConfirmationPage() {
             <CheckCircle2 className="size-10 text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
           </div>
           <div className="space-y-1.5 mt-2">
-            {isProcessing ? (
-              <>
-                <h1 className="text-2xl font-bold text-foreground">Payment Processing</h1>
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  Your payment is being processed. We'll email you once it's confirmed.
-                </p>
-              </>
-            ) : (
-              <>
-                <h1 className="text-2xl font-bold text-foreground">Order Confirmed!</h1>
-                <p className="text-sm text-muted-foreground max-w-xs">
+            <>
+              <h1 className="text-2xl font-bold text-foreground">Order Confirmed!</h1>
+              <p className="text-sm text-muted-foreground max-w-xs">
                   Thank you for your purchase. Your order has been placed successfully.
                 </p>
               </>
-            )}
+            
           </div>
         </div>
 
