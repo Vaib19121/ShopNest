@@ -29,6 +29,13 @@ const ENDPOINTS = {
   },
   CATEGORIES:{
     GET_CATEGORIES: '/categories',
+  },
+  ORDERS: {
+    GET_ORDERS: '/orders',
+    GET_ORDER_DETAIL: (id: number) => `/orders/${id}`,
+  },
+  PAYMENTS:{
+    CREATE_PAYMENT_INTENT: '/payments/create-intent',
   }
 } as const
 

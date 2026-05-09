@@ -24,7 +24,6 @@ export function ProductCard({ product, view = 'grid' }: ProductCardProps) {
 
   const wishlistItem = wishlistData?.items.find((i) => i.productId === Number(product.id))
   const wishlisted = !!wishlistItem
-  console.log("Product",product)
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault()
