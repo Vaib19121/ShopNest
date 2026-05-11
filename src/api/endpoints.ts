@@ -36,7 +36,15 @@ const ENDPOINTS = {
   },
   PAYMENTS:{
     CREATE_PAYMENT_INTENT: '/payments/create-intent',
-  }
+  },
+  ADDRESSES: {
+    GET_ADDRESSES: '/addresses',
+    ADD_ADDRESS: '/addresses',
+    GET_ADDRESS_BY_ID: (id: number) => `/addresses/${id}`,
+    UPDATE_ADDRESS_BY_ID: (id: number) => `/addresses/${id}`,
+    DELETE_ADDRESS_BY_ID: (id: number) => `/addresses/${id}`,
+    SET_PRIMARY_ADDRESS_BY_ID: (id: number) => `/addresses/${id}/primary`,
+  },
 } as const
 
 export default ENDPOINTS

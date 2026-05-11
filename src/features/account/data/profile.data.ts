@@ -59,42 +59,7 @@ export const STATUS_CONFIG = {
   },
 } as const
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
 
-export const MOCK_ORDERS: Order[] = [
-  {
-    id: 'ORD-8821',
-    product: 'Wireless Noise-Cancelling Headphones',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=80&h=80&fit=crop',
-    status: 'DELIVERED',
-    date: 'Apr 28, 2025',
-    price: 299.99,
-  },
-  {
-    id: 'ORD-8744',
-    product: 'Leather Minimalist Wallet',
-    image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=80&h=80&fit=crop',
-    status: 'IN_TRANSIT',
-    date: 'May 2, 2025',
-    price: 49.95,
-  },
-  {
-    id: 'ORD-8631',
-    product: 'Mechanical Keyboard — Tactile',
-    image: 'https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?w=80&h=80&fit=crop',
-    status: 'CANCELLED',
-    date: 'Mar 15, 2025',
-    price: 189.0,
-  },
-  {
-    id: 'ORD-8512',
-    product: 'Running Shoes — Cloud X',
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=80&h=80&fit=crop',
-    status: 'DELIVERED',
-    date: 'Feb 10, 2025',
-    price: 159.5,
-  },
-]
 
 export const MOCK_ADDRESSES: Address[] = [
   {
